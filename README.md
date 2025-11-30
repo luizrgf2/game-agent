@@ -10,6 +10,7 @@ Agente de IA para analise de games usando screenshots e visao computacional com 
 - **LangGraph**: Workflow inteligente com multiplas etapas
 - **OpenRouter**: Suporte a multiplos modelos de IA
 - **Text-to-Speech**: Vozes naturais do Microsoft Edge (pt-BR)
+- **Speech-to-Text**: Reconhecimento de voz com OpenAI Whisper
 
 ## Instalacao
 
@@ -38,10 +39,11 @@ uv sync
 cp .env.example .env
 # Edite o .env e adicione:
 # OPENROUTER_API_KEY=sk-or-v1-...
-# ENABLE_TTS=true  (opcional, para ativar voz)
+# ENABLE_TTS=true   (opcional, para ativar Text-to-Speech)
+# ENABLE_STT=true   (opcional, para ativar Speech-to-Text/voz)
 ```
 
-4. (Opcional) Para audio funcionar, instale um player:
+4. (Opcional) Para Text-to-Speech funcionar, instale um player de audio:
 
 ```bash
 # Linux
@@ -53,6 +55,18 @@ sudo apt install mpv
 brew install mpg123
 
 # Windows: funciona nativamente
+```
+
+5. (Opcional) Para Speech-to-Text funcionar, instale o PortAudio:
+
+```bash
+# Linux
+sudo apt install portaudio19-dev
+
+# Mac
+brew install portaudio
+
+# Windows: geralmente ja incluido
 ```
 
 ## Uso
@@ -77,6 +91,7 @@ Uma vez iniciado, voce pode usar comandos como:
 - `"me ajude com essa missao"` - Analise estrategica
 
 **Controles:**
+- `voice` ou `v` - Usar entrada de voz (grava 5 segundos)
 - `tts on` - Ativa a voz (text-to-speech)
 - `tts off` - Desativa a voz
 - `quit` ou `exit` - Sair do programa

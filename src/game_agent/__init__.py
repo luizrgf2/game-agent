@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 from .agent import GameAgent
 from .tts import TextToSpeech
 
+# Import STT only when needed to avoid PortAudio dependency error
+SpeechToText = None
+
 
 def main() -> None:
     """Main entry point for the game agent CLI."""
@@ -22,8 +25,9 @@ def main() -> None:
         print("Please create a .env file with your API key.")
         sys.exit(1)
 
-    # Check if TTS should be enabled
+    # Check if features should be enabled
     enable_tts = os.getenv("ENABLE_TTS", "true").lower() == "true"
+    enable_stt = os.getenv("ENABLE_STT", "false").lower() == "true"
 
     # Create the agent
     agent = GameAgent(api_key=api_key)
@@ -31,15 +35,33 @@ def main() -> None:
     # Create TTS if enabled
     tts = TextToSpeech() if enable_tts else None
 
+    # Create STT if enabled
+    stt = None
+    if enable_stt:
+        try:
+            # Import STT only when enabled to avoid dependency errors
+            from .stt import SpeechToText as STT
+            print("Inicializando Speech-to-Text (Whisper)...")
+            stt = STT(model_size="base")
+        except OSError as e:
+            print(f"⚠️  Erro ao inicializar STT: {e}")
+            print("Instale PortAudio para usar Speech-to-Text:")
+            print("  Linux: sudo apt install portaudio19-dev")
+            print("  Mac: brew install portaudio")
+            print("  Windows: geralmente já incluído")
+            enable_stt = False
+
     print("Game Agent initialized!")
     print("=" * 60)
     print("Welcome to Game Agent - AI-powered game analysis")
     if enable_tts:
         print("🔊 Text-to-Speech: ENABLED")
+    if enable_stt:
+        print("🎤 Speech-to-Text: ENABLED")
     print("=" * 60)
     print("\nCommands:")
-    print("  - 'analyze this game screen' - Takes screenshot and analyzes it")
-    print("  - 'read and interpret this text' - Takes screenshot and reads text")
+    print("  - Type your question or command")
+    print("  - 'voice' or 'v' - Use voice input (if STT enabled)")
     print("  - 'tts on/off' - Enable/disable text-to-speech")
     print("  - 'quit' or 'exit' - Exit the program")
     print("\n" + "=" * 60 + "\n")
@@ -55,6 +77,20 @@ def main() -> None:
             if user_input.lower() in ["quit", "exit", "q"]:
                 print("\nGoodbye!")
                 break
+
+            # Handle voice input
+            if user_input.lower() in ["voice", "v", "voz"]:
+                if not stt:
+                    print("⚠️  Speech-to-Text não está habilitado.")
+                    print("Configure ENABLE_STT=true no .env para usar voz.")
+                    continue
+
+                try:
+                    user_input = stt.listen_and_transcribe(duration=5)
+                    print(f"\n📝 Você disse: {user_input}\n")
+                except Exception as e:
+                    print(f"⚠️  Erro ao gravar áudio: {e}")
+                    continue
 
             # Handle TTS commands
             if user_input.lower() == "tts on":
