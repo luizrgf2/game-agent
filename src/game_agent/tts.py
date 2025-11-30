@@ -72,12 +72,17 @@ class TextToSpeech:
         """
         # Try different players based on OS
         if os.name == "posix":  # Linux/Mac
-            # Try mpg123 first, then mpv, then ffplay
-            players = ["mpg123", "mpv", "ffplay"]
-            for player in players:
+            # Try different players with arguments to avoid opening a window
+            players = {
+                "mpg123": ["-q"],
+                "mpv": ["--no-video", "--no-audio-display"],
+                "ffplay": ["-autoexit", "-nodisp"],
+            }
+            for player, args in players.items():
                 try:
                     process = await asyncio.create_subprocess_exec(
                         player,
+                        *args,
                         file_path,
                         stdout=asyncio.subprocess.DEVNULL,
                         stderr=asyncio.subprocess.DEVNULL,
@@ -89,7 +94,7 @@ class TextToSpeech:
 
             print(
                 f"Áudio gerado em: {file_path}\n"
-                f"Instale mpg123, mpv ou ffplay para reprodução automática."
+                "Instale mpg123, mpv ou ffplay para reprodução automática."
             )
         else:  # Windows
             try:
