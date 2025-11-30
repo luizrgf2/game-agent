@@ -15,10 +15,11 @@ dependencies = [
     "mss>=9.0.0",
     "python-dotenv>=1.0.0",
     "edge-tts>=6.1.0",
-    "openai-whisper>=20231117",
     "sounddevice>=0.4.0",
     "scipy>=1.11.0",
     "pynput>=1.8.1",
+    "speechrecognition>=3.14.4",
+    "pyaudio>=0.2.14",
 ]
 
 [project.scripts]

@@ -101,11 +101,13 @@ Quando o usuario pedir para analisar algo:
 Regras adicionais:
 
 * Use somente texto simples
+* Nao use acentos
 * Nao use caracteres especiais como asterisco, barra, arroba, cerquilha ou similares
 * Nao use emojis
-* As respostas devem ser sempre em portugues do brasil
+* As respostas devem ser sempre em portugues do brasil sem acentos
 * Siga exatamente as etapas descritas acima
 * Seja claro, direto e focado no contexto do jogo
+
 ."""
             )
             messages = [system_message] + messages

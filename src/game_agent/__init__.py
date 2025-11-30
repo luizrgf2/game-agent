@@ -44,8 +44,7 @@ def main() -> None:
         try:
             # Import STT only when enabled to avoid dependency errors
             from .stt import SpeechToText as STT
-            print("Inicializando Speech-to-Text (Whisper)...")
-            stt = STT(model_size="base")
+            stt = STT()
         except OSError as e:
             print(f"⚠️  Erro ao inicializar STT: {e}")
             print("Instale PortAudio para usar Speech-to-Text:")
