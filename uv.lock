@@ -520,6 +520,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "edge-tts" },
+    { name = "evdev" },
     { name = "langchain" },
     { name = "langchain-openai" },
     { name = "langgraph" },
@@ -528,6 +529,7 @@ dependencies = [
     { name = "pyaudio" },
     { name = "pynput" },
     { name = "python-dotenv" },
+    { name = "python-xlib" },
     { name = "scipy" },
     { name = "sounddevice" },
     { name = "speechrecognition" },
@@ -536,6 +538,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "edge-tts", specifier = ">=6.1.0" },
+    { name = "evdev", specifier = ">=1.9.2" },
     { name = "langchain", specifier = ">=0.3.0" },
     { name = "langchain-openai", specifier = ">=0.2.0" },
     { name = "langgraph", specifier = ">=0.2.0" },
@@ -544,6 +547,7 @@ requires-dist = [
     { name = "pyaudio", specifier = ">=0.2.14" },
     { name = "pynput", specifier = ">=1.8.1" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "python-xlib", specifier = ">=0.33" },
     { name = "scipy", specifier = ">=1.11.0" },
     { name = "sounddevice", specifier = ">=0.4.0" },
     { name = "speechrecognition", specifier = ">=3.14.4" },

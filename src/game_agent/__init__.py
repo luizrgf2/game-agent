@@ -31,6 +31,7 @@ def main() -> None:
     # Check if features should be enabled
     enable_tts = os.getenv("ENABLE_TTS", "true").lower() == "true"
     enable_stt = os.getenv("ENABLE_STT", "false").lower() == "true"
+    ptt_key = os.getenv("PTT_KEY", "m").lower()
 
     # Create the agent
     agent = GameAgent(api_key=api_key)
@@ -53,107 +54,168 @@ def main() -> None:
             print("  Windows: geralmente já incluído")
             enable_stt = False
 
-    # Queue for voice commands triggered by hotkey
-    voice_queue = queue.Queue()
-    is_recording = threading.Lock()
+    # Push-to-talk state
+    is_ptt_pressed = {"value": False}
+    audio_chunks = []
 
-    def on_hotkey_pressed():
-        """Callback when hotkey is pressed."""
-        if stt and not is_recording.locked():
-            # Clear any pending triggers
-            while not voice_queue.empty():
-                try:
-                    voice_queue.get_nowait()
-                except queue.Empty:
-                    break
-            voice_queue.put("VOICE_TRIGGERED")
-            print("\n🎤 Hotkey detectada! Gravando...", flush=True)
+    def on_press(key):
+        """Handle key press for push-to-talk."""
+        try:
+            if hasattr(key, 'char') and key.char == ptt_key and not is_ptt_pressed["value"]:
+                is_ptt_pressed["value"] = True
+                audio_chunks.clear()
+                print(f"\n🎤 Gravando... (Segure '{ptt_key.upper()}' pressionado)", flush=True)
+        except AttributeError:
+            pass
 
-    # Setup hotkey listener (Ctrl+Shift+V)
-    hotkey_listener = None
+    def on_release(key):
+        """Handle key release for push-to-talk."""
+        try:
+            if hasattr(key, 'char') and key.char == ptt_key and is_ptt_pressed["value"]:
+                is_ptt_pressed["value"] = False
+                print("🔴 Parou de gravar! Processando...", flush=True)
+        except AttributeError:
+            pass
+
+    # Setup keyboard listener for push-to-talk
+    listener = None
     if enable_stt:
-        hotkey = keyboard.HotKey(
-            keyboard.HotKey.parse('<ctrl>+<shift>+m'),
-            on_hotkey_pressed
-        )
-
-        def for_canonical(f):
-            return lambda k: f(hotkey_listener.canonical(k))
-
-        hotkey_listener = keyboard.Listener(
-            on_press=for_canonical(hotkey.press),
-            on_release=for_canonical(hotkey.release)
-        )
-        hotkey_listener.start()
+        listener = keyboard.Listener(on_press=on_press, on_release=on_release)
+        listener.start()
 
     print("Game Agent initialized!")
     print("=" * 60)
     print("Welcome to Game Agent - AI-powered game analysis")
     print("🔊 Text-to-Speech: ENABLED")
-    print("🎤 Speech-to-Text: ENABLED")
-    print("⌨️  Hotkey: Pressione Ctrl+Shift+M para gravar sua voz (15 segundos)")
+    print("🎤 Speech-to-Text: ENABLED (Push-to-Talk)")
+    print(f"⌨️  Pressione e SEGURE '{ptt_key.upper()}' para gravar sua voz")
+    print(f"    Solte '{ptt_key.upper()}' quando terminar de falar")
     print("=" * 60)
-    print("\nAguardando hotkey...\n")
+    print(f"\nAguardando tecla '{ptt_key.upper()}'...\n")
 
-    # Interactive loop - only process voice from hotkey
+    # Import for audio recording
+    import time
+    import sounddevice as sd
+    import numpy as np
+
+    # Interactive loop - push-to-talk
     while True:
         try:
-            # Wait for hotkey trigger
-            trigger = voice_queue.get()  # Blocking - waits for hotkey
+            # Wait for key press
+            while not is_ptt_pressed["value"]:
+                time.sleep(0.05)
 
-            if trigger == "VOICE_TRIGGERED" and stt:
-                with is_recording:
-                    # Record audio
-                    try:
-                        user_input = stt.listen_and_transcribe(duration=15)
-                        print(f"📝 Você disse: {user_input}\n")
-                    except Exception as e:
-                        print(f"⚠️  Erro ao gravar/transcrever áudio: {e}")
-                        print("\nAguardando próxima hotkey...\n")
-                        continue
+            # Record while key is pressed
+            audio_chunks.clear()
+            chunk_duration = 0.1  # 100ms chunks
+            samples_per_chunk = int(chunk_duration * stt.sample_rate)
 
-                    if not user_input or not user_input.strip():
-                        print("Nenhum áudio detectado. Aguardando próxima hotkey...\n")
-                        continue
+            while is_ptt_pressed["value"]:
+                try:
+                    chunk = sd.rec(
+                        samples_per_chunk,
+                        samplerate=stt.sample_rate,
+                        channels=1,
+                        dtype=np.int16,
+                        device=stt.device_index,
+                        blocking=True,
+                    )
+                    audio_chunks.append(chunk)
+                except Exception as e:
+                    print(f"⚠️  Erro ao gravar chunk: {e}")
+                    break
 
-                    # Process with agent
-                    try:
-                        print("\nProcessing your request...")
-                        result = agent.run(user_input)
+            # Key was released, process audio
+            if not audio_chunks:
+                print("⚠️  Nenhum áudio gravado")
+                print(f"\nAguardando tecla '{ptt_key.upper()}'...\n")
+                continue
 
-                        # Display the response
-                        print("\n" + "=" * 60)
-                        messages = result.get("messages", [])
-                        if messages:
-                            last_message = messages[-1]
-                            response_text = last_message.content
-                            print(f"\nAgent: {response_text}")
+            # Combine chunks and transcribe
+            try:
+                import io
+                import wave
+                import speech_recognition as sr
 
-                            # Speak the response if TTS is enabled
-                            if tts and isinstance(response_text, str):
-                                print("\n🔊 Playing audio...")
-                                try:
-                                    tts.speak(response_text, play=True)
-                                except Exception as e:
-                                    print(f"⚠️  Error playing audio: {e}")
-                        print("=" * 60)
-                        print("\nAguardando próxima hotkey...\n")
+                audio_data = np.concatenate(audio_chunks, axis=0)
 
-                    except Exception as e:
-                        print(f"⚠️  Erro ao processar com o agente: {e}")
-                        print("Verifique se sua chave de API do OpenRouter está válida no arquivo .env")
-                        print("\nAguardando próxima hotkey...\n")
+                # Check audio level
+                max_val = np.max(np.abs(audio_data))
+                if max_val < 100:
+                    print(f"⚠️  Áudio muito baixo (pico: {max_val})")
+                    print(f"\nAguardando tecla '{ptt_key.upper()}'...\n")
+                    continue
+
+                print(f"✓ Nível de áudio OK (pico: {max_val})")
+
+                # Convert to WAV
+                wav_io = io.BytesIO()
+                with wave.open(wav_io, 'wb') as wav_file:
+                    wav_file.setnchannels(1)
+                    wav_file.setsampwidth(2)
+                    wav_file.setframerate(stt.sample_rate)
+                    wav_file.writeframes(audio_data.tobytes())
+                wav_io.seek(0)
+
+                # Transcribe
+                print("🔄 Transcrevendo áudio...")
+                with sr.AudioFile(wav_io) as source:
+                    audio = stt.recognizer.record(source)
+                    user_input = stt.recognizer.recognize_google(audio, language="pt-BR")
+                    print(f"📝 Você disse: {user_input}\n")
+
+            except sr.UnknownValueError:
+                print("⚠️  Não consegui entender o áudio")
+                print(f"\nAguardando tecla '{ptt_key.upper()}'...\n")
+                continue
+            except Exception as e:
+                print(f"⚠️  Erro ao processar áudio: {e}")
+                print(f"\nAguardando tecla '{ptt_key.upper()}'...\n")
+                continue
+
+            if not user_input or not user_input.strip():
+                print("Nenhum texto detectado")
+                print(f"\nAguardando tecla '{ptt_key.upper()}'...\n")
+                continue
+
+            # Process with agent
+            try:
+                print("\nProcessando seu pedido...")
+                result = agent.run(user_input)
+
+                # Display response
+                print("\n" + "=" * 60)
+                messages = result.get("messages", [])
+                if messages:
+                    last_message = messages[-1]
+                    response_text = last_message.content
+                    print(f"\nAgent: {response_text}")
+
+                    # Speak response
+                    if tts and isinstance(response_text, str):
+                        print("\n🔊 Reproduzindo áudio...")
+                        try:
+                            tts.speak(response_text, play=True)
+                        except Exception as e:
+                            print(f"⚠️  Erro ao reproduzir: {e}")
+                print("=" * 60)
+                print(f"\nAguardando tecla '{ptt_key.upper()}'...\n")
+
+            except Exception as e:
+                print(f"⚠️  Erro ao processar: {e}")
+                print("Verifique sua chave de API no .env")
+                print(f"\nAguardando tecla '{ptt_key.upper()}'...\n")
 
         except KeyboardInterrupt:
             print("\n\nGoodbye!")
-            if hotkey_listener:
-                hotkey_listener.stop()
+            if listener:
+                listener.stop()
             break
         except Exception as e:
-            print(f"\nError: {e}")
+            print(f"\nErro: {e}")
             import traceback
             traceback.print_exc()
-            print("\nAguardando próxima hotkey...\n")
+            print(f"\nAguardando tecla '{ptt_key.upper()}'...\n")
 
 
 if __name__ == "__main__":
