@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Game Agent",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "game_agent",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        },
+        {
+            "name": "Debug Game Agent (current file)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        }
+    ]
+}
