@@ -40,12 +40,20 @@ def take_screenshot(save_path: Optional[str] = None) -> dict:
         # Convert to PIL Image
         img = Image.frombytes("RGB", screenshot.size, screenshot.rgb)
 
-        # Save the image
+        # Save the original image
         img.save(save_path)
 
-        # Convert to base64 for Claude vision
+        # Resize image for vision model to reduce tokens
+        # Max dimension of 1024 pixels
+        max_dimension = 1024
+        if img.width > max_dimension or img.height > max_dimension:
+            ratio = min(max_dimension / img.width, max_dimension / img.height)
+            new_size = (int(img.width * ratio), int(img.height * ratio))
+            img = img.resize(new_size, Image.Resampling.LANCZOS)
+
+        # Convert to base64 using JPEG with quality optimization
         buffered = io.BytesIO()
-        img.save(buffered, format="PNG")
+        img.save(buffered, format="JPEG", quality=85, optimize=True)
         img_base64 = base64.b64encode(buffered.getvalue()).decode()
 
     return {
@@ -85,12 +93,19 @@ def take_region_screenshot(x: int, y: int, width: int, height: int,
         # Convert to PIL Image
         img = Image.frombytes("RGB", screenshot.size, screenshot.rgb)
 
-        # Save the image
+        # Save the original image
         img.save(save_path)
 
-        # Convert to base64
+        # Resize image for vision model to reduce tokens
+        max_dimension = 1024
+        if img.width > max_dimension or img.height > max_dimension:
+            ratio = min(max_dimension / img.width, max_dimension / img.height)
+            new_size = (int(img.width * ratio), int(img.height * ratio))
+            img = img.resize(new_size, Image.Resampling.LANCZOS)
+
+        # Convert to base64 using JPEG with quality optimization
         buffered = io.BytesIO()
-        img.save(buffered, format="PNG")
+        img.save(buffered, format="JPEG", quality=85, optimize=True)
         img_base64 = base64.b64encode(buffered.getvalue()).decode()
 
     return {

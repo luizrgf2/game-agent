@@ -1,6 +1,7 @@
 """Speech-to-Text using OpenAI Whisper."""
 
 import tempfile
+import threading
 import wave
 from pathlib import Path
 
@@ -35,7 +36,7 @@ class SpeechToText:
         self.audio_dir = Path("audio_input")
         self.audio_dir.mkdir(exist_ok=True)
 
-    def record_audio(self, duration: int = 5) -> str:
+    def record_audio(self, duration: int = 10) -> str:
         """Record audio from microphone.
 
         Args:
@@ -96,7 +97,7 @@ class SpeechToText:
 
         return text
 
-    def listen_and_transcribe(self, duration: int = 5, language: str = "pt") -> str:
+    def listen_and_transcribe(self, duration: int = 15, language: str = "pt") -> str:
         """Record audio and transcribe in one step.
 
         Args:
