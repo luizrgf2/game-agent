@@ -22,6 +22,7 @@ dependencies = [
     "pyaudio>=0.2.14",
     "python-xlib>=0.33",
     "evdev>=1.9.2",
+    "pygame>=2.6.1",
 ]
 
 [project.scripts]
